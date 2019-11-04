@@ -2,3 +2,5 @@
 # About the project
 
 *Write a short description about the course and add a link to your GitHub repository here. This is an R Markdown (.Rmd) file so you can use R Markdown syntax.*
+
+Well I'm feeling rather good about the course, looking forward to it. I've used R before, but not necessarily for routine statistics but more specialised things, such as phylogenetic analysis and especially graphic formatting. Quite keen on studying actual statistics and how to implement that routinely in R. Heard about the course from the email list, would have never found it any other way! Here's the link for my GitHub repository: https://github.com/nikjohan/IODS-project.
