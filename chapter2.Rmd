@@ -1,7 +1,77 @@
-# Insert chapter 2 title here
+# Week 2: linear regression and model validation
 
-*Describe the work you have done this week and summarize your learning.*
+The data used here is derived from an introductory course in social statistics, organised in 2014. The full detailed metadata can be accessed here: https://www.mv.helsinki.fi/home/kvehkala/JYTmooc/JYTOPKYS3-meta.txt.
 
-- Describe your work and results clearly. 
-- Assume the reader has an introductory course level understanding of writing and reading R code as well as statistical methods.
-- Assume the reader has no previous knowledge of your data or the more advanced methods you are using.
+Inputting data to R
+```{r}
+#set working directory
+setwd("C:\\Users\\Niko\\Documents\\IODS-project\\data")
+learning2014analysis <- read.csv("learning2014analysis.csv", header = T)
+```
+The data consists of 7 variables and 166 observations, as explored below in R code.
+```{r}
+str(learning2014analysis)
+```
+attitude is a numerical estimate of the student's attitude towards statistics, based on a questionnaire. Points are the exam points on the final exam of the course. Age and gender are collected for each participant. Deep, stra and surf are variables about different approaches to statistics: a deep approach (deep), a strategic approach (stra) and a surface approach (surf). The data is derived from questions targeted for each specific approach on a Likert scale (1-5). All question scores for a given approach have been averaged to form a single deep, stra or surf value per correspondent. In the data wrangling section those correspondents without a exam score (points = 0, 17 correspondents) have been excluded.
+
+Graphical overview of the data with a scatterplot matrix
+```{r}
+library(GGally)
+library(ggplot2)
+p <- ggpairs(learning2014analysis, mapping = aes(col = gender), lower = list(combo = wrap("facethist", bins = 20)))
+p
+
+pairs(learning2014analysis[-3], col = learning2014analysis$gender)
+
+```
+Summary statistics for the data:
+```{r}
+summary(learning2014analysis)
+```
+
+As we are trying to predict and explain the final exam score, the points -variable is the target variable.
+Firstly, it seems age has little to do with any of the other variables, however the distribution of ages is skewed to younger ages, as the third quantile is 27 but the maximal age is 55. Similarly gender seems not to have a great impact based on the scatterplots. However, there is twice as many females included in the study group (F = 110, M = 56).
+
+Attitude seems to have the biggest and a positive impact on points, according to the scatterplots, a linear model could be fitted to the data. Attitude seems to be generally higher in males than in females.
+
+It is more difficult to judge if variables deep, surf or stra could act as meaningful explanatory variables for points, stra possibly being the best and slightly positive. Surf could potentially have a negative relationship with points. It is difficult to see a clear pattern between deep and points. However, deep and surf seem to have a negative relationship. This could be an indicator that the questionnaire is actually working in designating approaches to corrspondents: it is intuitive that students assigned to have a deep approach would have lower scores for a surface approach and vice versa. Deep values seem to be higher than other approach variables, and especially skewed towards higher values. Deep seems also to have the biggest outlier visible in the scatterplot matrix (low value of 1.585).
+
+Explanatory variables chosen for the model are attitude, stra and surf, deep is excluded for the outlier, the apparent skew and the lack of pattern with points.
+
+```{r}
+model1 <- lm(points ~ attitude + stra + surf, data = learning2014analysis)
+summary(model1)
+```
+In this model we see a highly significant effect of attitude, where the estimate for the slope is about 0.34. Significance is analysed with a t-statistic, by performing a t-test against the null hypothesis: "the slope does not differ from 0". The probability of the null hypothesis is very low (and lower than 0.05), so according to convention we can conclude that a significant result is found.
+However, both variables stra and surf have non-significant contributions to the model. We shall remove both variables from the final model, and cease any further interpretion of results, since the model will change due to the removal of non-significant explanatory variables.
+For starts, we remove the variable surf, since it's p-value is highest.
+```{r}
+model2 <- lm(points ~ attitude + stra, data = learning2014analysis)
+summary(model2)
+
+```
+Here, we still find that the contribution of variable stra is still non-significant, however, the p-value is now considerably lower due to the removal of surf. For the final model, this variable is anyhow removed.
+
+```{r}
+model3 <- lm(points ~ attitude, data = learning2014analysis)
+summary(model3)
+
+```
+Here the sole explanatory variable attitude is significant. The relationship between points and attitude is a positive one, with a slope of ~0.35. This means that the model estimates for an increase of 1 attitude score, +0.35 points were awarded in the final exam. The y-intercept of the modelled line is estimated at ~11.6 points, significantly different from 0 according to the t-test.
+The multiple R squared statistic tells us the square of the correlation coefficient between points and attitude. Being ~0.19, it suggests that ~19% of the variation in points is explained by the variation in attitude.
+
+
+Model validation: diagnostic plots 1. residuals vs. fitted values 2. normal QQ-plot 3. residuals vs. leverage
+```{r}
+plot(model3, which = 1) #residuals vs. fitted
+```
+```{r}
+plot(model3, which = 2) #Normal QQ-plot
+```
+```{r}
+plot(model3, which = 5) #residuals vs. leverage (with Cook's D as a red add-on line)
+```
+For residuals vs. fitted values, nothing too alarming is found and the model can be considered valid. There is no clear pattern of residuals, albeit three potential outliers are located in the plot (datapoints 145,56,35). The very high fitted values (>27) seem to have lower residuals, but overall there is no clear pattern.
+The Normal QQ-plot does show that the data deviates from the assumptions that the data is normally distributed. However, for the majority of the data the QQ-plot is ok for model validation, and the deviating points are few (but include the same outliers discussed above). For now, we could consider the model valid, especially since the significance of the slope was so high. To improve the model, one could try a transformation for the data to improve the normality of the residuals.
+Nothing alarming is found in the third graph, no datapoint is of high leverage or Cook's D. This strengthens the assumption that the model is valid, as the outliers mentioned above seem not to have too much of an impact on the actual values of the model parameters.
+

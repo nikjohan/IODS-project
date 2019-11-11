@@ -96,7 +96,7 @@ learning2014$stra <- rowMeans(strategic_columns)
 #narrowing down the data frame
 keep_columns <- c("Age", "Attitude", "gender", "Points", "deep", "stra", "surf")
 learning2014analysis <- select(learning2014, one_of(keep_columns))
-
+learning2014analysis[learning2014analysis$Points == 0,]
 #excluding exam score = o
 learning2014analysis <- filter(learning2014analysis, learning2014analysis$Points > 0)
 
@@ -122,3 +122,11 @@ write.csv(learning2014analysis, "learning2014analysis.csv", row.names = F)
 test <- read.csv("learning2014analysis.csv", header = T)
 str(test)
 head(test)
+
+install.packages("GGally")
+p <- ggpairs(learning2014analysis, mapping = aes(col = gender), lower = list(combo = wrap("facethist", bins = 20)))
+p
+install.packages("progress")
+library(GGally)
+library(ggplot2)
+
