@@ -1,1 +1,77 @@
 #Week 3 Logistic regression
+
+Let's read the data first. This data is from UCI Machine Learning database, and describes social data from students on maths and Portuguese from Portugal. Especially we are interested in the alcohol consumption of students, and explanatory variables that could be used to predict high alcohol use. The full metadata is available here: https://archive.ics.uci.edu/ml/datasets/Student+Performance
+
+```{r}
+#set working directory
+setwd("C:\\Users\\Niko\\Documents\\IODS-project\\data")
+library(dplyr)
+#intro to data
+alc <- read.table("alc.txt", header = T)
+str(alc)
+
+```
+Alcohol use (high or low) is the target variable, and here we'll see if explanatory variables provided are related to alcohol use. The chosen explanatory variables include sex, number of school absences, extra-curricular activities (yes or no) and free time after school (from 1 = very low to 5 = very high). The hypotheses are as follows:
+1. Males would tend to drink more than females, this seems to be the case for many social groups and settings.
+2. High school absences could be associated with high alcohol use
+3. Attendance in extra-curricular activities would limit alcohol use
+4. High free time after school could indicate that the student would have time and maybe drink more.
+It is noteworthy to see that if the model does find significant relationships, it does not necessarily imply causality between the variables. For instance if school absences and high alcohol use are significantly related, it does not mean that absences cause high alcohol use nor that high alcohol use causes absences. These variables are statistically related, so they have a relationship but it is not necessarily causal.
+
+Fitting the model:
+```{r}
+model1 <- glm(high_use ~ sex + absences + activities + freetime, data = alc, family = "binomial")
+summary(model1)
+
+
+```
+```{r}
+#model coefficients
+coef(model1)
+#compute odds ratios with confidence intervals
+OR1 <- coef(model1) %>% exp
+CI1 <- confint(model1) %>% exp
+cbind(OR1, CI1)
+```
+Statistical significance can be judged from the model coefficients, and a z-testi is used by default. Here we see that sex, number of absences and amount of free time have all positive and significant effect on high alcohol use. Having extra-curricular activities however has no statistically significant relation to high alcohol use in this data. The significance can also be judged from the confidence intervals of the odds ratio, where 1 is not included in the CI then the effect is significant.
+Hypotheses:
+1. Being male increases the odds of being a high drinker between 1.56 and 4.14 times compared to females. Hypothesis is accepted.
+2. Having a lot of absences increases the odds of being a high drinker by between 1.06 and 1.16 times for an incerease of 1 absence.
+3. Having extra-curricular activities is less likely for high drinkers, but this effect is not significant in this data.
+4. Having more free time increases the odds of being a high drinker between 1.06 and 1.74 times for an increase of 1 on a Likert scale of free time (from 1 = very low to 5 = very high).
+
+Exploring model predictions:
+```{r}
+#create a model with all explanatory variables significant
+model2 <- glm(high_use ~ sex + absences + freetime, data = alc, family = "binomial")
+#predict
+probabilities <- predict(model2, type = "response")
+alc <- mutate(alc, probability = probabilities)
+alc <- mutate(alc, prediction = probability > 0.5)
+
+# 2 x 2 cross-tabulation
+table(high_use = alc$high_use, prediction = alc$prediction)
+
+```
+```{r}
+#Graphical visualisation of predictions
+library(ggplot2)
+g <- ggplot(alc, aes(x = probability, y = high_use, col = prediction))
+g + geom_point()
+```
+```{r}
+#proportion of wrong predictions by using a loss function
+loss_func <- function(class, prob) {
+  n_wrong <- abs(class - prob) > 0.5
+  mean(n_wrong)
+}
+loss_func(class = alc$high_use, prob = alc$probability)
+```
+From the training error of about 27 % we can judge that the model is working much better compared to a simple 50/50 guess. 14 + 88 = 102 cases are predicted wrongly, most being correspondents of high alcohol use, but not caught by the model. This could indicate there are more factors affecting alcohol use, so maybe addition of new variables could increase model accuracy. In the graphic we can see a single "true" outlier, but clearly no cutoff is visible in the data where predictions are correct or incorrect.
+```{r}
+#10-fold cross-validation
+library(boot)
+cv <- cv.glm(data = alc, cost = loss_func, glmfit = model2, K = 10)
+cv$delta[1]
+```
+the predictative power of the 10-fold cross validation is similar but lower to the previous model as well as lower than the DataCamp example (error 0.26). The error rises in the cross validation, since less data is used to set up the model. Better models could be found if more predictors are included.
