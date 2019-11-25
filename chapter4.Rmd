@@ -19,11 +19,12 @@ Graphical summary
 ```{r}
 pairs(Boston)
 ```
+
 From the full graphical summary we can see that the data is quite varied, most variables being continuous but some discreet (eg. presence/absence of riverside chas). Some rather clear relationships are visible in the data, eg. between medv and rm (median value of homes and average room number) and dist & tax (distance to employment centres and property tax rate. Relationships can be more easily seen in the correlation matrix below:
 ```{r}
-library(dplyr)
+
 cor_matrix<-cor(Boston)
-cor_matrix %>% round(digits = 2)
+cor_matrix <- round(cor_matrix, digits = 2)
 
 
 ```
@@ -64,11 +65,11 @@ lda.fit <- lda(crime_rate ~., data = train)
 classes <- as.numeric(train$crime_rate)
 plot(lda.fit, dimen = 2, col = classes, pch = classes)
 ```
+
 Prediction
 ```{r}
 #save correct classifications from the test data set for model validation
 correct_classes <- test$crime_rate
-test
 #drop classifications
 test <- dplyr::select(test, -crime_rate)
 #prediction
@@ -90,6 +91,7 @@ km1 <-kmeans(boston_scaled, centers = 3)
 pairs(boston_scaled, col = km1$cluster)
 
 ```
+
 Checking for optimate number of centers with within cluster sum of squares
 ```{r}
 library(ggplot2)
@@ -105,11 +107,13 @@ qplot(x = 1:k_max, y = twcss, geom = 'line')
 
 
 ```
+
 Well it is a bit unclear where the best "drop" in TWCSS is, but as very many clusters are quite difficult to deal with, we'll choose k = 2 here.
 ```{r}
 km2 <-kmeans(boston_scaled, centers = 2)
 pairs(boston_scaled, col = km2$cluster)
 ```
+
 As the data is mostly continuous, it is difficult to see visually the clusters separating as clear entities. However, it does seem that majority of the data belongs to one cluster (red in the graphic), whereas the black cluster seem to be the minority of observations. Higher crime rates are associated with the black category.
 
 
@@ -122,7 +126,7 @@ boston_scaled$cluster <- km3$cluster
 #LDA on clusters
 lda.fit2 <- lda(boston_scaled$cluster ~., data = boston_scaled)
 #visualise, set up function for LDA arrows
-lda.arrows <- function(x, myscale = 1, arrow_heads = 0.1, color = "red", tex = 0.75, choices = c(1,2)){
+lda.arrows <- function(x, myscale = 1, arrow_heads = 0.1, color = "black", tex = 0.75, choices = c(1,2)){
   heads <- coef(x)
   arrows(x0 = 0, y0 = 0, 
          x1 = myscale * heads[,choices[1]], 
@@ -138,6 +142,7 @@ classes <- as.numeric(boston_scaled$cluster)
 plot(lda.fit2, dimen = 2, col = classes, pch = classes)
 lda.arrows(lda.fit2, myscale = 2)
 ```
+
 Clusters seem to separate reasonably well in the LDA plot. Arrow length in the plot is proportional to the relative strength of the variable in question affecting the clustering. It seems variables black (1000(Bk - 0.63)^2 where Bk is the proportion of blacks in town, a variable quantifying the ethnic background of the suburbs) and indus (proportion of non-retail business acres per town) seem to be the most influential.
 
 
