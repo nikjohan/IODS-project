@@ -7,6 +7,8 @@ Inputting data to R
 #set working directory
 setwd("C:\\Users\\Niko\\Documents\\IODS-project\\data")
 learning2014analysis <- read.csv("learning2014analysis.csv", header = T)
+
+
 ```
 The data consists of 7 variables and 166 observations, as explored below in R code.
 ```{r}

@@ -1,0 +1,143 @@
+#week 4 clustering and classification
+
+reading the data
+```{r}
+library(MASS)
+data("Boston")
+dim(Boston)
+str(Boston)
+```
+The Boston dataset is included in the R package MASS, and includes data on housing values in suburbs of Boston. What we are most interested here is the per capita crime rate in each of the suburbian towns, and how the towns can be classified according to this variable. The full description of the dataset can be accessed here: https://stat.ethz.ch/R-manual/R-devel/library/MASS/html/Boston.html.
+
+Data exploration:
+
+```{r}
+summary(Boston)
+```
+
+Graphical summary
+```{r}
+pairs(Boston)
+```
+From the full graphical summary we can see that the data is quite varied, most variables being continuous but some discreet (eg. presence/absence of riverside chas). Some rather clear relationships are visible in the data, eg. between medv and rm (median value of homes and average room number) and dist & tax (distance to employment centres and property tax rate. Relationships can be more easily seen in the correlation matrix below:
+```{r}
+library(dplyr)
+cor_matrix<-cor(Boston)
+cor_matrix %>% round(digits = 2)
+
+
+```
+
+Standardizing data: here, we scale the variables so that means are set to 0, and the variation withing a variable is taken into account via the standard deviation. The scale() function is applicable, since all data is numerical.
+```{r}
+library(MASS)
+boston_scaled <- scale(Boston)
+boston_scaled <- as.data.frame(boston_scaled)
+```
+Setting a categorical variable "crime_rate"
+```{r}
+library(dplyr)
+#create bin vector, use quantiles
+bins <- quantile(boston_scaled$crim)
+#create new factor variable
+crime_rate <- cut(boston_scaled$crim, breaks = bins, include.lowest = TRUE, label = c("low", "med_low", "med_high", "high"))
+#drop continuous crime
+boston_scaled <- dplyr::select(boston_scaled, -crim)
+#insert new factor crime_rate
+boston_scaled <- data.frame(boston_scaled, crime_rate)
+
+```
+Splitting data to 80% train set and 20% test set
+```{r}
+#take number of rows
+n <- nrow(boston_scaled)
+#choose 80%
+ind <- sample(n,  size = n * 0.8)
+# create train set
+train <- boston_scaled[ind,]
+# create test set 
+test <- boston_scaled[-ind,]
+```
+Fitting the linear discriminant analysis
+```{r}
+lda.fit <- lda(crime_rate ~., data = train)
+classes <- as.numeric(train$crime_rate)
+plot(lda.fit, dimen = 2, col = classes, pch = classes)
+```
+Prediction
+```{r}
+#save correct classifications from the test data set for model validation
+correct_classes <- test$crime_rate
+test
+#drop classifications
+test <- dplyr::select(test, -crime_rate)
+#prediction
+lda.pred <- predict(lda.fit, newdata = test)
+#results
+table(correct = correct_classes, predicted = lda.pred$class)
+```
+The model seems to predict the crime categories reasonably well! Most difficult seems to be distinguishing categories med_high and med_low as well as between low and med_low (both with 11 missclassified observations). Notably no observations of the score "high" were predicted to any incorrect category. The full rate of failed classifications is 3+2+11+1+11 = 28 over 74 so about 38%. Not ideal, but still useful.
+
+distance-based k-means
+```{r}
+data("Boston")
+boston_scaled <- scale(Boston)
+boston_scaled <- as.data.frame(boston_scaled)
+#calculate euclidean distance matrix
+dist_eu <- dist(boston_scaled, method = "euclidean")
+#initial k-means with 3 centers
+km1 <-kmeans(boston_scaled, centers = 3)
+pairs(boston_scaled, col = km1$cluster)
+
+```
+Checking for optimate number of centers with within cluster sum of squares
+```{r}
+library(ggplot2)
+#set the seed for reproducability
+set.seed(123)
+#max clusters k = 10
+k_max <- 10
+#total within sum of squares function
+twcss <- sapply(1:k_max, function(k){kmeans(boston_scaled, k)$tot.withinss})
+#visualise
+qplot(x = 1:k_max, y = twcss, geom = 'line')
+
+
+
+```
+Well it is a bit unclear where the best "drop" in TWCSS is, but as very many clusters are quite difficult to deal with, we'll choose k = 2 here.
+```{r}
+km2 <-kmeans(boston_scaled, centers = 2)
+pairs(boston_scaled, col = km2$cluster)
+```
+As the data is mostly continuous, it is difficult to see visually the clusters separating as clear entities. However, it does seem that majority of the data belongs to one cluster (red in the graphic), whereas the black cluster seem to be the minority of observations. Higher crime rates are associated with the black category.
+
+
+Bonus
+```{r}
+#kmeans for 4 centers for scaled Boston dataset
+km3 <- kmeans(boston_scaled, centers = 4)
+#include the kmeans clusted in the data frame
+boston_scaled$cluster <- km3$cluster
+#LDA on clusters
+lda.fit2 <- lda(boston_scaled$cluster ~., data = boston_scaled)
+#visualise, set up function for LDA arrows
+lda.arrows <- function(x, myscale = 1, arrow_heads = 0.1, color = "red", tex = 0.75, choices = c(1,2)){
+  heads <- coef(x)
+  arrows(x0 = 0, y0 = 0, 
+         x1 = myscale * heads[,choices[1]], 
+         y1 = myscale * heads[,choices[2]], col=color, length = arrow_heads)
+  text(myscale * heads[,choices], labels = row.names(heads), 
+       cex = tex, col=color, pos=3)
+}
+
+# target classes as numeric
+classes <- as.numeric(boston_scaled$cluster)
+
+# plot the lda results
+plot(lda.fit2, dimen = 2, col = classes, pch = classes)
+lda.arrows(lda.fit2, myscale = 2)
+```
+Clusters seem to separate reasonably well in the LDA plot. Arrow length in the plot is proportional to the relative strength of the variable in question affecting the clustering. It seems variables black (1000(Bk - 0.63)^2 where Bk is the proportion of blacks in town, a variable quantifying the ethnic background of the suburbs) and indus (proportion of non-retail business acres per town) seem to be the most influential.
+
+
