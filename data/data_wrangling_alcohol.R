@@ -223,3 +223,5 @@ glimpse(alc)
 
 #saving data
 write.table(alc, "alc.txt")
+read.table("alc.txt")
+alc <- read.table("alc.txt")

@@ -173,3 +173,10 @@ str(human)
 # $ employedM      : num  68.7 71.8 74.9 66.4 70.6 66.4 68.1 68.9 71 73.8 ...
 # $ eduratio       : num  1.007 0.997 0.983 0.989 0.969 ...
 # $ empratio       : num  0.891 0.819 0.825 0.884 0.829 ...
+library(dplyr)
+library(rlang)
+install.packages("rlang")
+install.packages("ggplot2")
+library(ggplot2)
+install.packages("stringr")
+library(stringr)
