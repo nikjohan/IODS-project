@@ -1,0 +1,68 @@
+#week 5 PCA
+
+#introduce the data
+```{r}
+library(GGally)
+library(ggplot2)
+
+human <- read.csv("http://s3.amazonaws.com/assets.datacamp.com/production/course_2218/datasets/human2.txt", header = T)
+ggpairs(human)
+
+```
+```{r}
+summary(human)
+```
+There seems to be many variables that have clear relationships in this data. Especially striking seems to be the linear-looking relationship between life expenctancy and expected years in education. Many variables seem to have distincts outliers, especially at the upper end (eg. GNI). Parli.F seems to be difficult to show to have a clear relationship to any other variable. The variabilities of the variablse differ quite a lot, which needs to be taken into account in further analysis.
+```{r}
+PCA1 <- prcomp(human)
+summary(PCA1)
+```
+```{r}
+biplot(PCA1, choices = 1:2)
+```
+Repeat with scaled data
+```{r}
+human_scaled <- scale(human)
+PCA2 <-prcomp(human_scaled)
+summary(PCA2)
+```
+```{r}
+biplot(PCA2, choices = 1:2)
+
+```
+
+The data is uninterpretable due to extreme variance in the 1st PCA. Standardization is absolutely necessary, since PCA cannot distinguish the relative strengths of variables if their variances do not match. In the 2nd PCA the first 2 principal components account for about 70% of the variance. In here we see that Mat.Mor and Ado.Birth are highly correlated with each other and with the first principal component. Likewise, expected years in education (Edu.exp), ratio of females and males in secondary education (Edu2.FM), GNI and life expectancy (Life.exp) are positively correlated among themselves and negatively correlated with PC1. The ratio of females and males in the labour force (Labo.FM) and the amount of females in parliamet (Parli.F) seems to be positively correlated with each other and PC2. The variation derived from these two variables is mostly missed in PC1.
+
+It seems PC1 seems to separate countries on economic status, availability of healthcare etc. basic quality of life. This is evident on the high impact of variables such as life expectancy and education indices with PC1. PC2 on the other hand distinguishes countries more on the basis of social status and justice, especially by womens' rights.
+
+Tea data
+
+
+```{r}
+library(FactoMineR)
+data(tea)
+summary(tea)
+
+```
+The tea dataset is massive, so we'll restrict ourselves to the tea sort itself and what it is used with (sugar, milk...) and the tea drinking time
+
+```{r}
+library(dplyr)
+library(tidyr)
+keep <- c("Tea", "How", "how", "sugar", "where", "lunch")
+tea_ <- dplyr::select(tea, one_of(keep))
+
+gather(tea_) %>% ggplot(aes(value)) + theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8)) + facet_wrap("key", scales = "free") + geom_bar()
+```
+Multiple correspondence analysis
+```{r}
+mca1 <- MCA(tea_)
+```
+```{r}
+summary(mca1)
+```
+```{r}
+plot(mca1, invisible = c("ind"))
+```
+MCA plot shows interesting patterns, such as that those using bagged tea are very likely to use sugar as well. A very separate group is people who buy unpackaged tea, this is often from a tea shop and it's usually green tea. 
+
