@@ -1,0 +1,114 @@
+#Week 6 analysis of longitudinal data
+
+#introduce datasets
+#RATS includes weight data of rats with 3 different treatments.
+#BPRS includes weekly bprs phychological test scores for me with 2 treatments.
+
+#quick summary of data
+```{r}
+
+#read the data
+BPRS <- read.table("https://raw.githubusercontent.com/KimmoVehkalahti/MABS/master/Examples/data/BPRS.txt", header = T)
+str(BPRS)
+#treatment, subject and 0 to 8 weeks of BPRS summed scores. 
+summary(BPRS)
+
+RATS <- read.table("https://raw.githubusercontent.com/KimmoVehkalahti/MABS/master/Examples/data/rats.txt", header = T)
+str(RATS)
+#ID and group, and then weight data from 11 time intervals from day 1 to day 64.
+summary(RATS)
+
+#factorization
+BPRS$treatment <- as.factor(BPRS$treatment)
+BPRS$subject <- as.factor(BPRS$subject)
+RATS$ID <- as.factor(RATS$ID)
+RATS$Group <- as.factor(RATS$Group)
+
+#convert to long form
+library(dplyr)
+library(tidyr)
+BPRSL <-  BPRS %>% gather(key = weeks, value = bprs, -treatment, -subject)
+BPRSL <-  BPRSL %>% mutate(week = as.integer(substr(weeks, 5,5)))
+BPRSL <- subset(BPRSL, select = -weeks)
+str(BPRSL)
+colnames(BPRSL)
+summary(BPRSL)
+
+
+RATSL <- RATS %>%
+  gather(key = WD, value = Weight, -ID, -Group) %>%
+  mutate(Time = as.integer(substr(WD,3,4)))
+str(RATSL)
+colnames(RATSL)
+summary(RATSL)
+```
+graphical summary
+```{r}
+library(ggplot2)
+ggplot(RATSL, aes(x = Time, y = Weight, group = ID)) +
+  geom_line(aes(linetype = Group)) +
+  scale_x_continuous(name = "Time (days)", breaks = seq(0, 60, 10)) +
+  scale_y_continuous(name = "Weight (grams)")+
+  theme(legend.position = "top")
+```
+Starting weigths of treatment 1 seem quite a bit lower compared to treatments 2 and 3.
+To understand the change in variation across time, we can plot standardised values:
+```{r}
+library(tidyr)
+library(dplyr)
+RATSL <- RATSL %>%
+  group_by(Time) %>%
+  mutate(stdWeight = (Weight - mean(Weight))/sd(Weight)) %>%
+  ungroup()
+ggplot(RATSL, aes(x = Time, y = stdWeight, group = ID)) +
+  geom_line(aes(linetype = Group)) +
+  scale_x_continuous(name = "Time (days)", breaks = seq(0, 60, 10)) +
+  scale_y_continuous(name = "Standardised weight")+
+  theme(legend.position = "top")
+```
+Variability seems rather constant with time.
+Next summary graph of the mean weight for each group
+```{r}
+n <- RATSL$Time %>% unique() %>% length()
+RATSS <- RATSL %>%
+  group_by(Group, Time) %>%
+  summarise( mean = mean(Weight), se = sd(Weight)/sqrt(n) ) %>%
+  ungroup()
+ggplot(RATSS, aes(x = Time, y = mean, linetype = Group, shape = Group)) +
+  geom_line() +
+ 
+  geom_point(size=3) +
+
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se, linetype="1"), width=0.3) +
+  theme(legend.position = c(0.8,0.8)) +
+  scale_y_continuous(name = "mean(Weight) +/- se(Weight)")
+```
+Boxplot summary
+```{r}
+RATSL1 <- RATSL %>%
+  filter(Time > 1) %>%
+  group_by(Group, ID) %>%
+  summarise( mean=mean(Weight) ) %>%
+  ungroup()
+ggplot(RATSL1, aes(x = Group, y = mean)) +
+  geom_boxplot() +
+  stat_summary(fun.y = "mean", geom = "point", shape=23, size=4, fill = "white") +
+  scale_y_continuous(name = "mean(Weight)")
+
+```
+Filter 3 outliers out
+```{r}
+
+RATSL2 <- filter(RATSL1, Group == "1" & mean >250 |Group == "2" | Group == "3")
+RATSL3 <- filter(RATSL2, Group == "2" & mean < 550  |Group == "1" | Group == "3")
+RATSL4 <- filter(RATSL3, Group == "3" & mean > 500  |Group == "1" | Group == "2")
+ggplot(RATSL4, aes(x = Group, y = mean)) +
+  geom_boxplot() +
+  stat_summary(fun.y = "mean", geom = "point", shape=23, size=4, fill = "white") +
+  scale_y_continuous(name = "mean(Weight)")
+```
+Anova with no baseline
+```{r}
+
+```
+
