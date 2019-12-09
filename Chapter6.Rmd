@@ -109,6 +109,55 @@ ggplot(RATSL4, aes(x = Group, y = mean)) +
 ```
 Anova with no baseline
 ```{r}
-
+lm1 <- lm(mean ~ Group, data = RATSL4)
+anova(lm1)
 ```
+Here difference in group is significant.
+
+Analysis on BPRS data
+Quick graphical summary
+```{r}
+str(BPRSL)
+
+ggplot(BPRSL, aes(x = week, y = bprs, linetype = subject)) +
+  geom_line() +
+  scale_linetype_manual(values = rep(1:10, times=4)) +
+  facet_grid(. ~ treatment, labeller = label_both) +
+  theme(legend.position = "none") + 
+  scale_y_continuous(limits = c(min(BPRSL$bprs), max(BPRSL$bprs)))
+```
+fit lm model (assume independence of datapoints)
+```{r}
+lm3 <- lm(bprs ~ week + treatment, data = BPRSL)
+summary(lm3)
+```
+significant time difference, no singificant difference between treatments 1 and 2.
+fit random intercept model 
+```{r}
+library(lme4)
+lm4 <- lmer(bprs ~ week + treatment + (1 | subject), data = BPRSL, REML = F)
+summary(lm4)
+```
+variablity (sd) of the random effect of subject: 6.885.
+fit random intercept + random slope model
+```{r}
+lm5 <- lmer(bprs ~ week + treatment + (week | subject), data = BPRSL, REML = F)
+summary(lm5)
+```
+variablity (sd) of the random effect of subject higher now (8.051)
+Check anova of two models
+```{r}
+anova(lm4, lm5)
+```
+lower chisquared, low p -> random intercept with random slope is better!
+fit a random intercept + random slope with interaction
+```{r}
+lm6 <- lmer(bprs ~ week + treatment + week*treatment + (week | subject), data = BPRSL, REML = F)
+summary(lm6)
+```
+compare to previous model
+```{r}
+anova(lm5, lm6)
+```
+still a lower chisquared, so this is so far the best model!
 
